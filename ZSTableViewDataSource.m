@@ -7,8 +7,6 @@
 //
 
 #import "ZSTableViewDataSource.h"
-#import "BKBaseModel.h"
-#import "BKBaseCell.h"
 
 @interface ZSTableViewDataSource()
 
@@ -16,8 +14,6 @@
 @property (nonatomic,readwrite,copy) ZSTableViewCellConfigureBlock configureCellBlock;
 @property (nonatomic,readwrite,copy) ZSTabelViewDidSelectBlock didSelectBlock;
 @property (nonatomic,readwrite,assign) NSInteger sectionCount;
-
-@property (nonatomic,readwrite,strong) UIView *sectionHeader;
 @end
 
 @implementation ZSTableViewDataSource
@@ -38,31 +34,59 @@
         self.configureCellBlock = aConfigureCellBlock;
         self.didSelectBlock = aDidSelectBlock;
         self.sectionCount = sectionCount;
-        self.sectionHeader = nil;
+    }
+    return self;
+}
+
+- (id)initWithItems:(NSArray *)anItems sectionCount:(NSInteger)sectionCount configureCellBlock:(ZSTableViewCellConfigureBlock)aConfigureCellBlock didSelectBlock:(ZSTabelViewDidSelectBlock)aDidSelectBlock sectionHeaders:(NSArray *)sectionHeaderViews{
+    self = [self initWithItems:anItems sectionCount:sectionCount configureCellBlock:aConfigureCellBlock didSelectBlock:aDidSelectBlock];
+    if (self) {
+        self.sectionHeaderViews = [sectionHeaderViews mutableCopy];
     }
     return self;
 }
 
 - (id)itemAtIndexPath:(NSIndexPath *)indexPath{
-    return self.items[(NSUInteger)indexPath.row];
+    if (self.sectionCount > 1) {
+        id a = self.items[indexPath.section];
+        if ([a isKindOfClass:[NSArray class]]) {
+            NSArray *array = a;
+            if (array.count > 0) {
+                return [array safeObjectAtIndex:indexPath.row];
+            }
+        }else{
+            return [self.items safeObjectAtIndex:indexPath.row];
+        }
+    }
+    return [self.items safeObjectAtIndex:indexPath.section];
 }
 
 - (nonnull UITableViewCell *)tableView:(nonnull UITableView *)tableView cellForRowAtIndexPath:(nonnull NSIndexPath *)indexPath {
     id item = [self itemAtIndexPath:indexPath];
-    BKBaseModel *baseModel = (BKBaseModel *)item;
 
-    UITableViewCell *cell = [tableView dequeueReusableCellWithIdentifier:[baseModel getCellID]?[baseModel getCellID]:@"BKBaseCell"];
+    BaseCell *cell = [tableView dequeueReusableCellWithIdentifier:[item getCellID]];
     if (cell == nil) {
-        cell = [[NSBundle mainBundle] loadNibNamed:[baseModel getCellID] owner:nil options:nil].firstObject;
+        cell = [[NSBundle mainBundle] loadNibNamed:[item getCellID] owner:nil options:nil].firstObject;
     }
     if (self.configureCellBlock) {
-        self.configureCellBlock(cell, item,indexPath);
+        self.configureCellBlock(cell, item);
     }
     return cell;
 }
 
 - (NSInteger)tableView:(nonnull UITableView *)tableView numberOfRowsInSection:(NSInteger)section {
-    return self.items.count;
+    if (self.sectionCount > 1) {
+        id a = [self.items safeObjectAtIndex:section];
+        if ([a isKindOfClass:[NSArray class]]) {
+            NSArray *array = a;
+            if (array.count > 0) {
+                return array.count;
+            }
+        }else{
+            return self.items.count;
+        }
+    }
+    return self.items.count;;
 }
 
 - (NSInteger)numberOfSectionsInTableView:(UITableView *)tableView{
@@ -71,49 +95,44 @@
 
 - (void)tableView:(UITableView *)tableView didSelectRowAtIndexPath:(NSIndexPath *)indexPath{
     [tableView deselectRowAtIndexPath:indexPath animated:YES];
-    BKBaseCell *cell = [tableView cellForRowAtIndexPath:indexPath];
-    BKBaseModel *model = [self itemAtIndexPath:indexPath];
+    BaseCell *cell = [tableView cellForRowAtIndexPath:indexPath];
+    BaseModel *model = [self itemAtIndexPath:indexPath];
     if (self.didSelectBlock) {
-        self.didSelectBlock(cell, model,indexPath);
+        self.didSelectBlock(cell, model);
     }
 }
 - (CGFloat)tableView:(UITableView *)tableView heightForRowAtIndexPath:(NSIndexPath *)indexPath{
-    BKBaseModel *model = [self itemAtIndexPath:indexPath];
+    BaseModel *model = [self itemAtIndexPath:indexPath];
     return model.height;
 }
 
-- (CGFloat)tableView:(UITableView *)tableView heightForFooterInSection:(NSInteger)section{
-    return 0.1;
+- (UIView *)tableView:(UITableView *)tableView viewForHeaderInSection:(NSInteger)section{
+    if (self.sectionHeaderViews.count > 0) {
+        if (section+1 > _sectionHeaderViews.count) {
+            return [UIView new];
+        }
+       return self.sectionHeaderViews[section];
+    }
+    return [UIView new];
 }
 
 - (CGFloat)tableView:(UITableView *)tableView heightForHeaderInSection:(NSInteger)section{
-    if (self.sectionHeader) {
-       return self.sectionHeader.height;
+    if (self.sectionHeaderViews.count > 0) {
+        if (section+1 > _sectionHeaderViews.count) {
+            return 0.01;
+        }
+        UIView *view = self.sectionHeaderViews[section];
+        return view.height;
     }
-    return 0.1;
+    return 0;
 }
 
-- (UIView *)tableView:(UITableView *)tableView viewForHeaderInSection:(NSInteger)section{
-    return self.sectionHeader;
+- (CGFloat)tableView:(UITableView *)tableView heightForFooterInSection:(NSInteger)section{
+    return 0.01;
 }
-
-
 
 - (void)dealloc{
     self.didSelectBlock = nil;
 }
-
-- (void)setHeaderInSection:(UIView *)headerView{
-    self.sectionHeader = headerView;
-}
-
-
-- (void)scrollViewDidEndDragging:(UIScrollView *)scrollView willDecelerate:(BOOL)decelerate{
-    if ([self.ZS_ScrollDelegate respondsToSelector:@selector(ZS_scrollViewDidEndDragging:)]) {
-        [self.ZS_ScrollDelegate ZS_scrollViewDidEndDragging:scrollView.contentOffset];
-    }
-}
-
-
 @end
 

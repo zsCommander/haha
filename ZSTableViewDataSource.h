@@ -13,14 +13,9 @@
  @param cell cell
  @param item 数据源model
  */
-typedef void(^ZSTableViewCellConfigureBlock)(id cell,id item,NSIndexPath *indexPath);
+typedef void(^ZSTableViewCellConfigureBlock)(id cell,id item);
 
-typedef void(^ZSTabelViewDidSelectBlock)(id cell,id item,NSIndexPath *indexPath);
-
-
-@protocol ZSScrollViewDelegate <NSObject>
-- (void)ZS_scrollViewDidEndDragging:(CGPoint)offset;
-@end
+typedef void(^ZSTabelViewDidSelectBlock)(id cell,id item);
 
 @interface ZSTableViewDataSource : NSObject<UITableViewDataSource,UITableViewDelegate>
 /**
@@ -34,13 +29,19 @@ typedef void(^ZSTabelViewDidSelectBlock)(id cell,id item,NSIndexPath *indexPath)
 - (id)initWithItems:(NSArray *)anItems
        sectionCount:(NSInteger)sectionCount
  configureCellBlock:(ZSTableViewCellConfigureBlock)aConfigureCellBlock
+     didSelectBlock:(ZSTabelViewDidSelectBlock)aDidSelectBlock sectionHeaders:(NSArray *)sectionHeaderViews;
+
+- (id)initWithItems:(NSArray *)anItems
+       sectionCount:(NSInteger)sectionCount
+ configureCellBlock:(ZSTableViewCellConfigureBlock)aConfigureCellBlock
      didSelectBlock:(ZSTabelViewDidSelectBlock)aDidSelectBlock;
 /**
  *  根据indexPath获取数据
  */
 - (id)itemAtIndexPath:(NSIndexPath *)indexPath;
 
-- (void)setHeaderInSection:(UIView *)headerView;
-
-@property (nonatomic, weak) id<ZSScrollViewDelegate> ZS_ScrollDelegate;
+/**
+ *  sectionHeaderViews
+ */
+@property (nonatomic,strong) NSMutableArray *sectionHeaderViews;
 @end
